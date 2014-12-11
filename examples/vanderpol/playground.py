@@ -19,12 +19,13 @@ if __name__ == "__main__":
 
     # This comes as read-in for the level class
     lparams = {}
-    lparams['restol'] = 1E-10
+    lparams['restol'] = 1E-12
 
     sparams = {}
-    sparams['Tend'] = 2.0
-    sparams['maxiter'] = 100
-    sparams['pred_iter_lim'] = 2
+    sparams['Tend'] = 6.0
+    sparams['maxiter'] = 20
+    # sparams['pred_iter_lim'] = 7
+    sparams['quad_tol_mean'] = 5E-05
 
     # This comes as read-in for the problem class
     cparams = {}
@@ -38,7 +39,7 @@ if __name__ == "__main__":
                         dtype_u             =   mesh,
                         dtype_f             =   mesh,
                         collocation_class   =   collclass.CollGaussLegendre,
-                        num_nodes           =   3,
+                        num_nodes           =   5,
                         sweeper_class       =   generic_LU,
                         level_params        =   lparams,
                         id                  =   'L0')
@@ -68,10 +69,11 @@ if __name__ == "__main__":
     xdata = []
     ydata = []
     cdata = []
+    uend = None
     while S.time < S.params.Tend:
 
-        uend = sdc_step(S)
-        # uend = adaptive_sdc_step(S)
+        # uend = sdc_step(S)
+        uend = adaptive_sdc_step(S)
 
         step_stats.append(S.stats)
 
@@ -89,9 +91,12 @@ if __name__ == "__main__":
     print('u_end:',uend.values,' at time',S.time)
 
     # this is for Tend = 2.0, computed with 2k time-steps and M=3 (G-Le)
-    if S.time == 2.0:
-        uex = np.array([1.7092338721248415, -0.17438654047532 ])
-        print('Error:',np.linalg.norm(uex-uend.values,np.inf)/np.linalg.norm(uex,np.inf))
+    if (S.time-2.0) < np.finfo(np.float32).eps:
+        uex = np.array([1.7092338721248415, -0.17438654047532])
+    if (S.time-6.0) < np.finfo(np.float32).eps:
+        uex = np.array([-1.9829583186520894, 0.1336636970912627])
+
+    print('Error:',np.linalg.norm(uex-uend.values,np.inf)/np.linalg.norm(uex,np.inf))
 
     print('Min/Max/Sum number of iterations: %s/%s/%s' %(min(stats.niter for stats in step_stats),
                                                          max(stats.niter for stats in step_stats),
@@ -108,4 +113,4 @@ if __name__ == "__main__":
     # plt.savefig(name,rasterized=True)
     # call('pdfcrop '+name+' '+name,shell=True)
     #
-    # plt.show()
+    plt.show()

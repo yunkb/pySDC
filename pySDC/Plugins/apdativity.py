@@ -38,18 +38,15 @@ def adaptive_predict(Sweeper,Step):
         L.sweep.update_nodes()
         L.sweep.compute_residual()
 
-        Step.iter += 1
+        uvals = [L.u[m].values[1] for m in range(1,L.sweep.coll.num_nodes+1)]
+        tdisc_err = abs(np.dot(L.sweep.coll.Wmat,uvals)[-1])
+        print('Absolute value of last coeff. of Legendre expansion: %8.4e' %tdisc_err)
 
-        pred_iter = np.ceil(np.log(L.status.residual/L.params.restol)/np.log(res_old/L.status.residual))
-
-        # pred_iter = np.ceil(np.log10(L.status.residual/L.params.restol))
-        # print('Predicted niter: ',pred_iter,'at time',Step.time)
-
-        if pred_iter > Step.params.pred_iter_lim and adapt_flag is not UP:
+        if tdisc_err > 5*Step.params.quad_tol_mean and adapt_flag is not UP:
             Step.dt = Step.dt/2
             print('Setting dt down to ',Step.dt,Step.time)
             adapt_flag = DOWN
-        elif pred_iter < Step.params.pred_iter_lim and adapt_flag is not DOWN:
+        elif tdisc_err < Step.params.quad_tol_mean/5 and adapt_flag is not DOWN:
             Step.dt = 2*Step.dt
             print('Setting dt up to ',Step.dt, Step.time)
             adapt_flag = UP
@@ -57,7 +54,28 @@ def adaptive_predict(Sweeper,Step):
             adapt_flag = None
             accepted = True
 
-        if Step.time+Step.dt > Step.params.Tend - 1E-14:
+
+
+        # Step.iter += 1
+
+        # pred_iter = np.ceil(np.log(L.status.residual/L.params.restol)/np.log(res_old/L.status.residual))
+        #
+        # # pred_iter = np.ceil(np.log10(L.status.residual/L.params.restol))
+        # # print('Predicted niter: ',pred_iter,'at time',Step.time)
+        #
+        # if pred_iter > Step.params.pred_iter_lim and adapt_flag is not UP:
+        #     Step.dt = Step.dt/2
+        #     print('Setting dt down to ',Step.dt,Step.time)
+        #     adapt_flag = DOWN
+        # elif pred_iter < Step.params.pred_iter_lim and adapt_flag is not DOWN:
+        #     Step.dt = 2*Step.dt
+        #     print('Setting dt up to ',Step.dt, Step.time)
+        #     adapt_flag = UP
+        # else:
+        #     adapt_flag = None
+        #     accepted = True
+
+        if Step.time + Step.dt >= Step.params.Tend - np.finfo(np.float32).eps:
             Step.dt = Step.params.Tend - Step.time
             print('Resetting dt to ',Step.dt)
             accepted = True

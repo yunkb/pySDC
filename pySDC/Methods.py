@@ -26,7 +26,7 @@ def sdc_step(S):
 
     L = S.levels[0]
 
-    if S.time+S.dt > S.params.Tend:
+    if S.time + S.dt >= S.params.Tend - np.finfo(np.float32).eps:
         S.dt = S.params.Tend - S.time
         print('Resetting step size to %12.8f to hit %12.8f...' %(S.dt,S.params.Tend))
 
@@ -49,6 +49,8 @@ def sdc_step(S):
 
     L.sweep.compute_end_point()
 
+    print('Time: %8.4f -- Iteration: %s -- Residual: %12.8e' %(S.time,S.iter,L.status.residual))
+
     return L.uend
 
 
@@ -63,6 +65,12 @@ def adaptive_sdc_step(S):
 
     S.iter = 0
 
+    # L.sweep.predict()
+    #
+    # if S.time+S.dt > S.params.Tend + 5E-14:
+    #     S.dt = S.params.Tend - S.time
+    #     print('Resetting step size to %12.8f to hit %12.8f...' %(S.dt,S.params.Tend))
+
     AD.adaptive_predict(L.sweep,S)
 
     converged = False
@@ -75,10 +83,20 @@ def adaptive_sdc_step(S):
         L.sweep.update_nodes()
         L.sweep.compute_residual()
 
+        uend_old = L.uend
+        L.sweep.compute_end_point()
+
+        # if uend_old is not None:
+        #     print(abs(uend_old-L.uend))
+
         converged = check_convergence(S)
 
     L.sweep.compute_end_point()
-    # print('Niter at time %8.4f: %s' %(S.time+S.dt,S.iter))
+
+    # print('Quadrature discretization: %8.4e' %tdisc_err)
+    print('Time: %8.4f -- Iteration: %s -- Residual: %12.8e' %(S.time,S.iter,L.status.residual))
+
+
 
     return L.uend
 

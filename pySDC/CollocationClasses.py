@@ -20,6 +20,42 @@ class CollGaussLegendre(CollBase):
         self.delta_m = self._gen_deltas
         self.left_is_node = False
         self.right_is_node = False
+        self.Wmat = self._gen_Wmat
+
+
+    def basis_legpolynom_generator(self,order,domain):
+        basis = []
+        obj = []
+        coeffs = np.eye(order)
+        for i in range(order):
+            basis.append(leg.Legendre(coeffs[i,:],domain=domain))
+        return basis
+
+    def gen_V(self,tau,domain):
+        n = tau.shape[0]
+        V = np.zeros((n,n))
+        leggings = self.basis_legpolynom_generator(n,domain)
+        i = 0
+        for leg_pol in leggings:
+                V[:,i] = leg_pol(tau)
+                i += 1
+        return V
+
+    @property
+    def _gen_Wmat(self):
+
+        M = self.num_nodes
+
+        I = np.eye(M)
+        Vmat = np.zeros((M,M))
+        for m in range(M):
+            Vmat[:,m] = leg.legval(-1+2*self.nodes,I[m])
+
+        # Vmat = self.gen_V(-1+2*self.nodes,[-1,1])
+
+        Wmat = np.linalg.inv(Vmat)
+
+        return Wmat
 
     @property
     def _getNodes(self):
