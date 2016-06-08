@@ -139,3 +139,30 @@ class mass_matrix_imex(imex_1st_order.imex_1st_order):
         L.status.updated = False
 
         return None
+
+    def compute_end_point(self):
+        """
+        Compute u at the right point of the interval
+
+        The value uend computed here is a full evaluation of the Picard formulation unless do_full_update==False
+        """
+
+        # get current level and problem description
+        L = self.level
+        P = L.prob
+
+        # check if Mth node is equal to right point and do_coll_update is false, perform a simple copy
+        if (self.coll.right_is_node and not self.params.do_coll_update):
+            # a copy is sufficient
+            L.uend = P.dtype_u(L.u[-1])
+        else:
+            # start with u0 and add integral over the full interval (using coll.weights)
+            L.uend = P.apply_mass_matrix(P.dtype_u(L.u[0]))
+            for m in range(self.coll.num_nodes):
+                L.uend += L.dt * self.coll.weights[m] * (L.f[m + 1].impl + L.f[m + 1].expl)
+            # add up tau correction of the full interval (last entry)
+            if L.tau is not None:
+                L.uend += L.tau[-1]
+            L.uend = P.invert_mass_matrix(L.uend)
+
+        return None

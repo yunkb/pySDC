@@ -30,6 +30,9 @@ if __name__ == "__main__":
     sparams = {}
     sparams['maxiter'] = 20
 
+    swparams = {}
+    swparams['do_coll_update'] = True
+
     # This comes as read-in for the problem class
     pparams = {}
     pparams['nu'] = 0.1
@@ -54,6 +57,7 @@ if __name__ == "__main__":
     description['collocation_class'] = collclass.CollGaussRadau_Right
     description['num_nodes'] = 3
     description['sweeper_class'] = mass_matrix_imex
+    description['sweeper_params'] = swparams
     description['level_params'] = lparams
     description['transfer_class'] = mesh_to_mesh_fenics
     description['transfer_params'] = tparams

@@ -31,7 +31,7 @@ class sweeper(with_metaclass(abc.ABCMeta)):
 
                 defaults = dict()
                 defaults['do_LU'] = False
-                defaults['do_coll_update'] = False
+                defaults['do_coll_update'] = True
                 
                 for k,v in defaults.items():
                     setattr(self,k,v)
