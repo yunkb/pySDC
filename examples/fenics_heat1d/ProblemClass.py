@@ -75,6 +75,7 @@ class fenics_heat(ptype):
         self.K = df.assemble(a_K)
 
         # set forcing term as expression
+        # self.g = df.Expression('0',a=np.pi,b=self.nu,t=self.t0,degree=self.order)
         self.g = df.Expression('-sin(a*x[0]) * (sin(t) - b*a*a*cos(t))',a=np.pi,b=self.nu,t=self.t0,degree=self.order)
         # self.g = df.Expression('-sin(a*x[0]) * sin(a*x[1]) * (sin(t) - b*2*a*a*cos(t))',a=np.pi,b=self.nu,t=self.t0,degree=self.order)
         # set boundary values
@@ -120,6 +121,7 @@ class fenics_heat(ptype):
         self.g.t = t
         fexpl = fenics_mesh(self.V)
         fexpl.values = df.Function(self.V,df.interpolate(self.g,self.V).vector())
+        fexpl = self.apply_mass_matrix(fexpl)
 
         return fexpl
 
@@ -135,9 +137,9 @@ class fenics_heat(ptype):
             implicit part of RHS
         """
 
-        tmp = fenics_mesh(self.V)
-        tmp.values = df.Function(self.V,self.K*u.values.vector())
-        fimpl = self.__invert_mass_matrix(tmp)
+        fimpl = fenics_mesh(self.V)
+        self.bc.apply(self.K, u.values.vector())
+        fimpl.values = df.Function(self.V,self.K*u.values.vector())
 
         return fimpl
 
@@ -172,12 +174,13 @@ class fenics_heat(ptype):
         """
 
         me = fenics_mesh(self.V)
+        self.bc.apply(self.M, u.values.vector())
         me.values = df.Function(self.V,self.M*u.values.vector())
 
         return me
 
 
-    def __invert_mass_matrix(self,u):
+    def invert_mass_matrix(self,u):
         """
         Helper routine to invert mass matrix
 

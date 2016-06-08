@@ -84,7 +84,7 @@ class mass_matrix_imex(imex_1st_order.imex_1st_order):
             for j in range(M+1):
                 integral[m] -= L.dt*(self.QI[m+1,j]*L.f[j].impl + self.QE[m+1,j]*L.f[j].expl)
             # add initial value
-            integral[m] += L.u[0]
+            integral[m] += P.apply_mass_matrix(L.u[0])
             # add tau if associated
             if L.tau is not None:
                 integral[m] += L.tau[m]
@@ -95,8 +95,6 @@ class mass_matrix_imex(imex_1st_order.imex_1st_order):
             rhs = P.dtype_u(integral[m])
             for j in range(m+1):
                 rhs += L.dt*(self.QI[m+1,j]*L.f[j].impl + self.QE[m+1,j]*L.f[j].expl)
-            # apply mass matrix to rhs #TODO: Hloy crap, I can put this into solve_system right???
-            rhs = P.apply_mass_matrix(rhs)
 
             # implicit solve with prefactor stemming from QI
             L.u[m+1] = P.solve_system(rhs,L.dt*self.QI[m+1,m+1],L.u[m+1],L.time+L.dt*self.coll.nodes[m])
@@ -105,5 +103,39 @@ class mass_matrix_imex(imex_1st_order.imex_1st_order):
 
         # indicate presence of new values at this level
         L.status.updated = True
+
+        return None
+
+    def compute_residual(self):
+        """
+        Computation of the residual using the collocation matrix Q
+        """
+
+        # get current level and problem description
+        L = self.level
+        P = L.prob
+
+        # check if there are new values (e.g. from a sweep)
+        assert L.status.updated
+
+        # compute the residual for each node
+
+        # build QF(u)
+        res_norm = []
+        res = self.integrate()
+        for m in range(self.coll.num_nodes):
+            # add u0 and subtract u at current node
+            res[m] += P.apply_mass_matrix(L.u[0]-L.u[m + 1])
+            # add tau if associated
+            if L.tau is not None:
+                res[m] += L.tau[m]
+            # use abs function from data type here
+            res_norm.append(abs(res[m]))
+
+        # find maximal residual over the nodes
+        L.status.residual = max(res_norm)
+
+        # indicate that the residual has seen the new values
+        L.status.updated = False
 
         return None
