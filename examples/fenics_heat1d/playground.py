@@ -28,25 +28,25 @@ if __name__ == "__main__":
     lparams['restol'] = 5E-09
 
     sparams = {}
-    sparams['maxiter'] = 20
+    sparams['maxiter'] = 10
 
     swparams = {}
-    swparams['do_coll_update'] = True
+    swparams['do_coll_update'] = False
 
     # This comes as read-in for the problem class
     pparams = {}
-    pparams['nu'] = 0.1
+    pparams['nu'] = 1.0
     pparams['t0'] = 0.0 # ugly, but necessary to set up ProblemClass
     # pparams['c_nvars'] = [(16,16)]
     pparams['c_nvars'] = [128]
     pparams['family'] = 'CG'
     pparams['order'] = [1]
-    pparams['refinements'] = [1]
+    pparams['refinements'] = [1,0]
 
 
     # This comes as read-in for the transfer operations
     tparams = {}
-    tparams['finter'] = True
+    tparams['finter'] = False
 
     # Fill description dictionary for easy hierarchy creation
     description = {}

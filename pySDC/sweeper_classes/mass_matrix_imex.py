@@ -84,7 +84,10 @@ class mass_matrix_imex(imex_1st_order.imex_1st_order):
             for j in range(M+1):
                 integral[m] -= L.dt*(self.QI[m+1,j]*L.f[j].impl + self.QE[m+1,j]*L.f[j].expl)
             # add initial value
-            integral[m] += P.apply_mass_matrix(L.u[0])
+            if L.id != 'L1':
+                integral[m] += P.apply_mass_matrix(L.u[0])
+            else:
+                integral[m] += L.u[0]
             # add tau if associated
             if L.tau is not None:
                 integral[m] += L.tau[m]
@@ -125,7 +128,10 @@ class mass_matrix_imex(imex_1st_order.imex_1st_order):
         res = self.integrate()
         for m in range(self.coll.num_nodes):
             # add u0 and subtract u at current node
-            res[m] += P.apply_mass_matrix(L.u[0]-L.u[m + 1])
+            if L.id != 'L1':
+                res[m] += P.apply_mass_matrix(L.u[0]-L.u[m + 1])
+            else:
+                res[m] += L.u[0] - P.apply_mass_matrix(L.u[m + 1])
             # add tau if associated
             if L.tau is not None:
                 res[m] += L.tau[m]

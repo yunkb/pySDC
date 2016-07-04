@@ -1,4 +1,5 @@
 from __future__ import division
+import numpy as np
 
 from pySDC.Transfer import transfer
 from pySDC.datatype_classes.fenics_mesh import fenics_mesh,rhs_fenics_mesh
@@ -68,3 +69,69 @@ class mesh_to_mesh_fenics(transfer):
             u_fine.expl.values = df.interpolate(G.expl.values,u_fine.expl.V)
 
         return u_fine
+
+    def restrict(self):
+        """
+        Space-time restriction routine
+
+        The routine applies the spatial restriction operator to teh fine values on the fine nodes, then reevaluates f
+        on the coarse level. This is used for the first part of the FAS correction tau via integration. The second part
+        is the integral over the fine values, restricted to the coarse level. Finally, possible tau corrections on the
+        fine level are restricted as well.
+        """
+
+        # get data for easier access
+        F = self.fine
+        G = self.coarse
+
+        PF = F.prob
+        PG = G.prob
+
+        SF = F.sweep
+        SG = G.sweep
+
+        # only of the level is unlocked at least by prediction
+        assert F.status.unlocked
+        # can only do space-restriction so far
+        assert np.array_equal(SF.coll.nodes, SG.coll.nodes)
+
+        # restrict fine values in space, reevaluate f on coarse level
+        G.u[0] = self.restrict_space(F.u[0])
+        G.f[0] = PG.eval_f(G.u[0], G.time)
+        for m in range(1, SG.coll.num_nodes + 1):
+            G.u[m] = self.restrict_space(F.u[m])
+            G.f[m] = PG.eval_f(G.u[m], G.time + G.dt * SG.coll.nodes[m - 1])
+
+        # build coarse level tau correction part
+        tauG = G.sweep.integrate()
+        for m in range(SG.coll.num_nodes):
+            tauG[m] = PG.apply_mass_matrix(G.u[m+1]) - tauG[m]
+
+        # build fine level tau correction part
+        tauF = F.sweep.integrate()
+
+        # restrict fine level tau correction part
+        tauFG = []
+        for m in range(SG.coll.num_nodes):
+            tauFG.append(self.restrict_space(PF.apply_mass_matrix(F.u[m+1]) - tauF[m]))
+            # tauFG.append(self.restrict_space(tauF[m]))
+
+        # build tau correction, also restrict possible tau correction from fine
+        for m in range(SG.coll.num_nodes):
+            G.tau[m] =  tauG[m] - tauFG[m]
+            # G.tau[m] = tauFG[m] - tauG[m]
+
+            if F.tau is not None:
+                G.tau[m] += self.restrict_space(F.tau[m])
+
+        # save u and rhs evaluations for interpolation
+        for m in range(SG.coll.num_nodes + 1):
+            G.uold[m] = PG.dtype_u(G.u[m])
+            G.fold[m] = PG.dtype_f(G.f[m])
+
+        G.u[0] = self.restrict_space(PF.apply_mass_matrix(F.u[0]))
+
+        # works as a predictor
+        G.status.unlocked = True
+
+        return None
