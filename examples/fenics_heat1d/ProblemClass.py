@@ -75,8 +75,8 @@ class fenics_heat(ptype):
         self.K = df.assemble(a_K)
 
         # set forcing term as expression
-        # self.g = df.Expression('0',a=np.pi,b=self.nu,t=self.t0,degree=self.order)
-        self.g = df.Expression('-sin(a*x[0]) * (sin(t) - b*a*a*cos(t))',a=np.pi,b=self.nu,t=self.t0,degree=self.order)
+        self.g = df.Expression('0',a=np.pi,b=self.nu,t=self.t0,degree=self.order)
+        # self.g = df.Expression('-sin(a*x[0]) * (sin(t) - b*a*a*cos(t))',a=np.pi,b=self.nu,t=self.t0,degree=self.order)
         # self.g = df.Expression('-sin(a*x[0]) * sin(a*x[1]) * (sin(t) - b*2*a*a*cos(t))',a=np.pi,b=self.nu,t=self.t0,degree=self.order)
         # set boundary values
         self.bc = df.DirichletBC(self.V, df.Constant(0.0), Boundary)
@@ -97,6 +97,7 @@ class fenics_heat(ptype):
 
         A = self.M - factor*self.K
         b = fenics_mesh(rhs)
+        # b = self.apply_mass_matrix(b)
 
         self.bc.apply(A,b.values.vector())
 
@@ -215,7 +216,8 @@ class fenics_heat(ptype):
         """
 
         # u0 = df.Expression('sin(a*x[0]) * sin(a*x[1]) * cos(t)',a=np.pi,t=t,degree=self.order)
-        u0 = df.Expression('sin(a*x[0]) * cos(t)',a=np.pi,t=t,degree=self.order)
+        # u0 = df.Expression('sin(a*x[0]) * cos(t)',a=np.pi,t=t,degree=self.order)
+        u0 = df.Expression('sin(a*x[0]) * exp(-t*a*a*b)', a=np.pi, b=self.nu, t=t, degree=self.order)
 
         me = fenics_mesh(self.V)
         me.values = df.interpolate(u0,self.V)

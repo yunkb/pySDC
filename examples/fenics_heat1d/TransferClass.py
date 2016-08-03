@@ -52,6 +52,25 @@ class mesh_to_mesh_fenics(transfer):
 
         return u_coarse
 
+
+    def project_space(self,F):
+        """
+        Restriction implementation
+
+        Args:
+            F: the fine level data (easier to access than via the fine attribute)
+        """
+
+        if isinstance(F,fenics_mesh):
+            u_coarse = fenics_mesh(self.init_c)
+            u_coarse.values = df.project(F.values,u_coarse.V)
+        elif isinstance(F,rhs_fenics_mesh):
+            u_coarse = rhs_fenics_mesh(self.init_c)
+            u_coarse.impl.values = df.project(F.impl.values,u_coarse.impl.V)
+            u_coarse.expl.values = df.project(F.expl.values,u_coarse.expl.V)
+
+        return u_coarse
+
     def prolong_space(self,G):
         """
         Prolongation implementation
@@ -96,10 +115,10 @@ class mesh_to_mesh_fenics(transfer):
         assert np.array_equal(SF.coll.nodes, SG.coll.nodes)
 
         # restrict fine values in space, reevaluate f on coarse level
-        G.u[0] = self.restrict_space(F.u[0])
+        G.u[0] = self.project_space(F.u[0])
         G.f[0] = PG.eval_f(G.u[0], G.time)
         for m in range(1, SG.coll.num_nodes + 1):
-            G.u[m] = self.restrict_space(F.u[m])
+            G.u[m] = self.project_space(F.u[m])
             G.f[m] = PG.eval_f(G.u[m], G.time + G.dt * SG.coll.nodes[m - 1])
 
         # build coarse level tau correction part
@@ -129,9 +148,46 @@ class mesh_to_mesh_fenics(transfer):
             G.uold[m] = PG.dtype_u(G.u[m])
             G.fold[m] = PG.dtype_f(G.f[m])
 
-        G.u[0] = self.restrict_space(PF.apply_mass_matrix(F.u[0]))
+        # TODO: WTF? Do I need this?
+        # G.u[0] = self.restrict_space(PF.apply_mass_matrix(F.u[0]))
 
         # works as a predictor
         G.status.unlocked = True
+
+        return None
+
+    def prolong(self):
+        """
+        Space-time prolongation routine
+
+        This routine applies the spatial prolongation routine to the difference between the computed and the restricted
+        values on the coarse level and then adds this difference to the fine values as coarse correction.
+        """
+
+        # get data for easier access
+        F = self.fine
+        G = self.coarse
+
+        PF = F.prob
+
+        SF = F.sweep
+        SG = G.sweep
+
+        # only of the level is unlocked at least by prediction or restriction
+        assert G.status.unlocked
+        # can only do space-restriction so far
+        assert np.array_equal(SF.coll.nodes,SG.coll.nodes)
+
+        # build coarse correction
+        # need to restrict F.u[0] again here, since it might have changed in PFASST
+
+        G.uold[0] = self.project_space(F.u[0])
+
+        F.u[0] += self.prolong_space(G.u[0] - G.uold[0])
+        F.f[0] = PF.eval_f(F.u[0],F.time)
+
+        for m in range(1,SF.coll.num_nodes+1):
+            F.u[m] += self.prolong_space(G.u[m] - G.uold[m])
+            F.f[m] = PF.eval_f(F.u[m],F.time+F.dt*SF.coll.nodes[m-1])
 
         return None
