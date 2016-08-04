@@ -41,8 +41,8 @@ if __name__ == "__main__":
     # pparams['c_nvars'] = [(16,16)]
     pparams['c_nvars'] = [128]
     pparams['family'] = 'CG'
-    pparams['order'] = [4]
-    pparams['refinements'] = [1,1]
+    pparams['order'] = [1]
+    pparams['refinements'] = [1,0]
 
 
     # This comes as read-in for the transfer operations
