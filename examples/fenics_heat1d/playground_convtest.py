@@ -28,7 +28,7 @@ if __name__ == "__main__":
 
     # This comes as read-in for the level class
     lparams = {}
-    lparams['restol'] = 5E-09
+    lparams['restol'] = 1E-13
 
     # This comes as read-in for the steps
     sparams = {}
@@ -38,6 +38,7 @@ if __name__ == "__main__":
     swparams = {}
     swparams['collocation_class'] = collclass.CollGaussRadau_Right
     swparams['num_nodes'] = 3
+    swparams['do_coll_update'] = False
 
     # This comes as read-in for the transfer operations
     tparams = {}
@@ -58,8 +59,8 @@ if __name__ == "__main__":
 
     dt_list = [Tend/(2**i) for i in range(0,7,1)]
     c_nvars_list = [2**i for i in range(2,7)]
-    # dt_list = [2.0]
-    # c_nvars_list = [512]
+    dt_list = [Tend/(2**3)]
+    c_nvars_list = [2**5]
 
     results = {}
     # results['description'] = (pparams,swparams)
@@ -109,7 +110,7 @@ if __name__ == "__main__":
 
             id = ID(c_nvars=c_nvars, dt=dt)
             results[id] = (niter,err_classical_rel,err_fenics)
-            file = open('fenics_heat_unforced_mlsdc_CG4_mm.pkl', 'wb')
+            file = open('fenics_heat_unforced_mlsdc_CG4_mm_DEBUG.pkl', 'wb')
             pickle.dump(results, file)
 
     print(results)
