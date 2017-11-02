@@ -6,7 +6,7 @@ from pySDC.implementations.collocation_classes.gauss_radau_right import CollGaus
 from pySDC.implementations.controller_classes.allinclusive_multigrid_nonMPI import allinclusive_multigrid_nonMPI
 from pySDC.implementations.problem_classes.GeneralizedFisher_1D_FD_implicit import generalized_fisher
 
-from playgrounds.compression.HookClass_dump import dump
+from pySDC.playgrounds.compression.HookClass_dump import dump
 
 from pySDC.helpers.stats_helper import filter_stats, sort_stats
 
