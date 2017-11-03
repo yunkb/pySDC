@@ -31,7 +31,7 @@ def main():
     problem_params['omega_E'] = 4.9  # E-field frequency
     problem_params['omega_B'] = 25.0  # B-field frequency
     problem_params['u0'] = np.array([[10, 0, 0], [100, 0, 100], [1], [1]])  # initial center of positions
-    problem_params['nparts'] = 2**17  # number of particles in the trap
+    problem_params['nparts'] = 2**14  # number of particles in the trap
     problem_params['sig'] = 0.1  # smoothing parameter for the forces
 
     # initialize step parameters
@@ -40,7 +40,7 @@ def main():
 
     # initialize controller parameters
     controller_params = dict()
-    controller_params['hook_class'] = particle_hook  # specialized hook class for more statistics and output
+    # controller_params['hook_class'] = particle_hook  # specialized hook class for more statistics and output
 
     # Fill description dictionary for easy hierarchy creation
     description = dict()
@@ -71,10 +71,10 @@ def main():
     # ax.scatter(uinit.pos.values[0::3], uinit.pos.values[1::3], uinit.pos.values[2::3])
     # plt.show()
 
-    with open('particle_dump_128k', 'w') as f:
+    with open('particle_dump_128k_init', 'w') as f:
         np.savez(f, [uinit.pos.values, uinit.vel.values])
 
-    with open('particle_dump_128k', 'w') as f:
+    with open('particle_dump_128k_end', 'w') as f:
         np.savez(f, [uend.pos.values, uend.vel.values])
 
 
