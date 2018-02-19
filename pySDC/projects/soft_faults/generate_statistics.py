@@ -78,8 +78,6 @@ def run_clean_simulations(type=None, f=None):
     print(out)
 
     controller_params['hook_class'] = fault_hook
-    description['sweeper_params']['allow_multiple_faults_per_iteration'] = False
-    description['sweeper_params']['allow_multiple_faults_per_run'] = False
     description['sweeper_params']['bitflip_probability'] = 0.0
 
     # instantiate controller
@@ -142,6 +140,7 @@ def run_faulty_simulations(type=None, f=None):
     controller_params['hook_class'] = fault_hook
     description['sweeper_params']['allow_multiple_faults_per_iteration'] = False
     description['sweeper_params']['allow_multiple_faults_per_run'] = False
+    description['sweeper_params']['allow_fault_correction'] = True
     description['sweeper_params']['bitflip_probability'] = 1.0
 
     # instantiate controller

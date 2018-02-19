@@ -178,6 +178,7 @@ class implicit_sweeper_faults(generic_implicit):
 
         # we need to make sure that not another fault is injected here.. could also temporarily lower the probability
         self.in_correction = True
+        print('     doing correction...')
 
         self.fault_stats.ncorrection_attempts += 1
         self.fault_detected = False
