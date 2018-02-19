@@ -12,7 +12,6 @@ class fault_hook(hooks):
 
         L.sweep.reset_fault_stats()
 
-
     def post_run(self, step, level_number):
 
         super(fault_hook, self).post_run(step, level_number)
