@@ -129,7 +129,7 @@ def run_faulty_simulations(type=None, f=None):
         description, controller_params = diffusion_setup()
         # set time parameters
         t0 = 0.0
-        Tend = 1.0
+        Tend = 0.25
     else:
         raise ValueError('No valis setup type provided, aborting..')
 
@@ -137,13 +137,12 @@ def run_faulty_simulations(type=None, f=None):
     f.write(out + '\n')
     print(out)
 
-
     filehandle_injections = open('dump_injections.txt', 'w')
     controller_params['hook_class'] = fault_hook
     description['sweeper_params']['allow_multiple_faults_per_iteration'] = False
     description['sweeper_params']['allow_multiple_faults_per_run'] = False
-    description['sweeper_params']['allow_fault_correction'] = True
-    description['sweeper_params']['detector_threshold'] = 1E-12
+    description['sweeper_params']['allow_fault_correction'] = False
+    description['sweeper_params']['detector_threshold'] = 1E-10
     description['sweeper_params']['dump_injections_filehandle'] = filehandle_injections
     description['sweeper_params']['bitflip_probability'] = 1.0
 
@@ -171,21 +170,34 @@ def run_faulty_simulations(type=None, f=None):
 
 def process_statistics(type=None, results=None):
 
+    minlen = 1000
+    for stats in results:
+        residuals = sort_stats(filter_stats(stats, type='residual_post_iteration'), sortby='iter')
+        minlen = min(minlen, len(residuals))
+
+    minres = np.zeros(minlen)
+    minres[:] = 1000
+    maxres = np.zeros(minlen)
     for stats in results:
 
         # Some black magic to extract fault stats ouf of monstrous stats object
         fault_stats = sort_stats(filter_stats(stats, type='fault_stats'), sortby='type')[0][1]
         # Some black magic to extract number of iterations ouf of monstrous stats object
-        niter_stats = sort_stats(filter_stats(stats, type='niter'), sortby='time')
-        niters = np.array([item[1] for item in niter_stats])
+        residuals = sort_stats(filter_stats(stats, type='residual_post_iteration'), sortby='iter')
+        for i in range(minlen):
+            minres[i] = min(minres[i], residuals[i][1])
+            maxres[i] = max(minres[i], residuals[i][1])
 
         # Example output of what we now can do
         print('Number of faults in u + f: %s + %s = %s' %
               (fault_stats.nfaults_injected_u, fault_stats.nfaults_injected_f,
                fault_stats.nfaults_injected_u + fault_stats.nfaults_injected_f))
-        print('Mean number of iterations for this run: %s' % np.mean(niters))
+
+        # print('Mean number of iterations for this run: %s' % np.mean(niters))
         print()
-    pass
+
+    print(minres)
+    print(maxres)
 
 
 def main():
