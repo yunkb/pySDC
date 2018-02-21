@@ -49,6 +49,9 @@ class implicit_sweeper_faults(generic_implicit):
         if 'allow_fault_correction' not in params:
             params['allow_fault_correction'] = False
 
+        if 'detector_threshold' not in params:
+            params['detector_threshold'] = 1.0
+
         # call parent's initialization routine
         super(implicit_sweeper_faults, self).__init__(params)
 
@@ -133,7 +136,7 @@ class implicit_sweeper_faults(generic_implicit):
         self.fault_injected_run = True
         self.fault_injected_iteration = True
 
-    def detect_fault(self, current_node=None):
+    def detect_fault(self, current_node=None, rhs=None):
         """
         Main method to detect a fault
 
@@ -144,12 +147,12 @@ class implicit_sweeper_faults(generic_implicit):
         # get current level for further use
         L = self.level
 
-        # do detection magic here... DO NOT CHEAT, DO NOT USE fault_injected FLAGS HERE!
-        if L.u[current_node].values[19] == -1000:
-            print('     fault in u detected')
-            self.fault_detected = True
-        if L.f[current_node].values[19] == -1000:
-            print('     fault in f detected')
+        res = L.u[current_node].values - L.dt * self.QI[current_node, current_node] * L.f[current_node].values \
+            - rhs.values
+        res_norm = np.linalg.norm(res, np.inf)
+
+        if res_norm > self.params.detector_threshold:
+            print('     FAULT DETECTED!')
             self.fault_detected = True
 
         # update statistics
@@ -265,7 +268,7 @@ class implicit_sweeper_faults(generic_implicit):
                 L.f[m + 1] = P.eval_f(L.u[m + 1], L.time + L.dt * self.coll.nodes[m])
 
             # see if our detector finds something
-            self.detect_fault(current_node=m + 1)
+            self.detect_fault(current_node=m + 1, rhs=rhs)
 
             # if we are allowed to try correction, do so, otherwise proceed with sweep
             if not self.in_correction and self.fault_detected and self.params.allow_fault_correction:

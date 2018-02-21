@@ -141,6 +141,7 @@ def run_faulty_simulations(type=None, f=None):
     description['sweeper_params']['allow_multiple_faults_per_iteration'] = False
     description['sweeper_params']['allow_multiple_faults_per_run'] = False
     description['sweeper_params']['allow_fault_correction'] = True
+    description['sweeper_params']['detector_threshold'] = 1E-12
     description['sweeper_params']['bitflip_probability'] = 1.0
 
     # instantiate controller
