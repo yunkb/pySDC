@@ -137,11 +137,14 @@ def run_faulty_simulations(type=None, f=None):
     f.write(out + '\n')
     print(out)
 
+
+    filehandle_injections = open('dump_injections.txt', 'w')
     controller_params['hook_class'] = fault_hook
     description['sweeper_params']['allow_multiple_faults_per_iteration'] = False
     description['sweeper_params']['allow_multiple_faults_per_run'] = False
     description['sweeper_params']['allow_fault_correction'] = True
     description['sweeper_params']['detector_threshold'] = 1E-12
+    description['sweeper_params']['dump_injections_filehandle'] = filehandle_injections
     description['sweeper_params']['bitflip_probability'] = 1.0
 
     # instantiate controller
@@ -160,6 +163,8 @@ def run_faulty_simulations(type=None, f=None):
         uend, stats = controller.run(u0=uinit, t0=t0, Tend=Tend)
 
         results.append(stats)
+
+    filehandle_injections.close()
 
     return results
 

@@ -1,4 +1,5 @@
 import numpy as np
+from datetime import datetime
 
 from pySDC.implementations.sweeper_classes.generic_implicit import generic_implicit
 
@@ -51,6 +52,9 @@ class implicit_sweeper_faults(generic_implicit):
 
         if 'detector_threshold' not in params:
             params['detector_threshold'] = 1.0
+
+        if 'dump_injections_filehandle' not in params:
+            params['dump_injections_filehandle'] = None
 
         # call parent's initialization routine
         super(implicit_sweeper_faults, self).__init__(params)
@@ -110,6 +114,7 @@ class implicit_sweeper_faults(generic_implicit):
         if type == 'u':
 
             # do something to target = u here!
+            tmp = target.values[19].copy()
             target.values[19] = -1000
             print('     fault in u injected')
 
@@ -121,6 +126,7 @@ class implicit_sweeper_faults(generic_implicit):
         elif type == 'f':
 
             # do something to target = f here!
+            tmp = target.values[19].copy()
             target.values[19] = -1000
             print('     fault in f injected')
 
@@ -130,8 +136,18 @@ class implicit_sweeper_faults(generic_implicit):
 
         else:
 
+            tmp = None
             print('ERROR: wrong fault type specified, got %s' % type)
             exit()
+
+        if self.params.dump_injections_filehandle is not None:
+            out = str(datetime.now())
+            out += ' --- '
+            out += type + ' ' + str(19)
+            out += ' --- '
+            out += str(tmp) + ' ' + str(target.values[19])
+            out += '\n'
+            self.params.dump_injections_filehandle.write(out)
 
         self.fault_injected_run = True
         self.fault_injected_iteration = True
