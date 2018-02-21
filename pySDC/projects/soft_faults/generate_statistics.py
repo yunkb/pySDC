@@ -1,4 +1,5 @@
 import numpy as np
+import dill
 
 from pySDC.implementations.problem_classes.HeatEquation_1D_FD import heat1d
 from pySDC.implementations.datatype_classes.mesh import mesh
@@ -165,7 +166,7 @@ def run_faulty_simulations(type=None, f=None):
 
     filehandle_injections.close()
 
-    return results
+    dill.dump(results, open("results.pkl", "wb"))
 
 
 def process_statistics(type=None, results=None):
@@ -206,7 +207,8 @@ def main():
 
     type = 'diffusion'
     run_clean_simulations(type=type, f=f)
-    results = run_faulty_simulations(type=type, f=f)
+    run_faulty_simulations(type=type, f=f)
+    results = dill.load(open("results.pkl", "rb"))
     process_statistics(type=type, results=results)
 
     f.close()
