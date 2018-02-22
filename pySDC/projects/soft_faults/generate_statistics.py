@@ -70,16 +70,13 @@ def run_clean_simulations(type=None, f=None):
         description, controller_params = diffusion_setup()
         # set time parameters
         t0 = 0.0
-        Tend = 1.0
+        Tend = 0.25
     else:
         raise ValueError('No valis setup type provided, aborting..')
 
     out = '\nCLEAN RUN: Working with %s setup..' % type
     f.write(out + '\n')
     print(out)
-
-    controller_params['hook_class'] = fault_hook
-    description['sweeper_params']['bitflip_probability'] = 0.0
 
     # instantiate controller
     controller = allinclusive_multigrid_nonMPI(num_procs=1, controller_params=controller_params,
@@ -98,31 +95,16 @@ def run_clean_simulations(type=None, f=None):
     # convert filtered statistics to list of iterations count, sorted by process
     iter_counts = sort_stats(filtered_stats, sortby='time')
 
-    niters = np.array([item[1] for item in iter_counts])
-
-    out = '   Mean number of iterations: %4.2f' % np.mean(niters)
-    f.write(out + '\n')
-    print(out)
-    out = '   Range of values for number of iterations: %2i ' % np.ptp(niters)
-    f.write(out + '\n')
-    print(out)
-    out = '   Max/min number of iterations: %2i -- %2i' % (max(niters), min(niters))
-    f.write(out + '\n')
-    print(out)
-    out = '   Position of max/min number of iterations: %2i -- %2i' % (int(np.argmax(niters)), int(np.argmin(niters)))
-    f.write(out + '\n')
-    print(out)
-    out = '   Std and var for number of iterations: %4.2f -- %4.2f' % (float(np.std(niters)), float(np.var(niters)))
-    f.write(out + '\n')
-    print(out)
+    return iter_counts[0][1]
 
 
-def run_faulty_simulations(type=None, f=None):
+def run_faulty_simulations(type=None, niters=None, f=None):
     """
     A simple program to run faulty simulations
 
     Args:
         type (str): setup type
+        niters (int): number of iterations in clean run
         f: file handler
     """
 
@@ -140,12 +122,10 @@ def run_faulty_simulations(type=None, f=None):
 
     filehandle_injections = open('dump_injections.txt', 'w')
     controller_params['hook_class'] = fault_hook
-    description['sweeper_params']['allow_multiple_faults_per_iteration'] = False
-    description['sweeper_params']['allow_multiple_faults_per_run'] = False
-    description['sweeper_params']['allow_fault_correction'] = False
+    description['sweeper_params']['allow_fault_correction'] = True
     description['sweeper_params']['detector_threshold'] = 1E-10
     description['sweeper_params']['dump_injections_filehandle'] = filehandle_injections
-    description['sweeper_params']['bitflip_probability'] = 1.0
+    description['sweeper_params']['niters'] = niters
 
     # instantiate controller
     controller = allinclusive_multigrid_nonMPI(num_procs=1, controller_params=controller_params,
@@ -155,7 +135,7 @@ def run_faulty_simulations(type=None, f=None):
     P = controller.MS[0].levels[0].prob
     uinit = P.u_exact(t0)
 
-    nruns = 3
+    nruns = 10
     results = []
     for nr in range(nruns):
 
@@ -190,15 +170,15 @@ def process_statistics(type=None, results=None):
             maxres[i] = max(minres[i], residuals[i][1])
 
         # Example output of what we now can do
-        print('Number of faults in u + f: %s + %s = %s' %
-              (fault_stats.nfaults_injected_u, fault_stats.nfaults_injected_f,
-               fault_stats.nfaults_injected_u + fault_stats.nfaults_injected_f))
+        print(fault_stats.nfaults_injected_u, fault_stats.nfaults_injected_f, fault_stats.nfaults_detected,
+              fault_stats.nfalse_positives, fault_stats.nfalse_positives_in_correction,
+              fault_stats.nfaults_missed, fault_stats.nclean_steps)
 
         # print('Mean number of iterations for this run: %s' % np.mean(niters))
         print()
 
-    print(minres)
-    print(maxres)
+    # print(minres)
+    # print(maxres)
 
 
 def main():
@@ -206,8 +186,8 @@ def main():
     f = open('generate_statistics.txt', 'w')
 
     type = 'diffusion'
-    run_clean_simulations(type=type, f=f)
-    run_faulty_simulations(type=type, f=f)
+    niters = run_clean_simulations(type=type, f=f)
+    run_faulty_simulations(type=type, niters=niters, f=f)
     results = dill.load(open("results.pkl", "rb"))
     process_statistics(type=type, results=results)
 

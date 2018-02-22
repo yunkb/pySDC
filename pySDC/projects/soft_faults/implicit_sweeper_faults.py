@@ -16,7 +16,7 @@ class _fault_stats(FrozenClass):
         self.nfaults_missed = 0
         self.nfalse_positives = 0
         self.nfalse_positives_in_correction = 0
-        self.nclean_runs = 0
+        self.nclean_steps = 0
 
         self._freeze()
 
@@ -34,13 +34,6 @@ class implicit_sweeper_faults(generic_implicit):
         Args:
             params: parameters for the sweeper
         """
-
-        if 'allow_multiple_faults_per_iteration' not in params:
-            params['allow_multiple_faults_per_iteration'] = True
-        if 'allow_multiple_faults_per_run' not in params:
-            params['allow_multiple_faults_per_run'] = True
-        assert not(params['allow_multiple_faults_per_iteration'] and not params['allow_multiple_faults_per_run']), \
-            'ERROR: multiple faults per iteration allowed, but not per run'
 
         if 'bitflip_probability' not in params:
             params['bitflip_probability'] = 1.0
@@ -61,12 +54,10 @@ class implicit_sweeper_faults(generic_implicit):
 
         self.fault_stats = _fault_stats()
 
+        self.fault_injected = False
         self.fault_detected = False
-        self.fault_at_u = False
-        self.fault_at_f = False
-        self.fault_injected_iteration = False
-        self.fault_injected_run = False
         self.in_correction = False
+        self.fault_iteration = False
 
     def reset_fault_stats(self):
         """
@@ -74,32 +65,10 @@ class implicit_sweeper_faults(generic_implicit):
         """
 
         self.fault_stats = _fault_stats()
+        self.fault_injected = False
         self.fault_detected = False
-        self.fault_at_u = False
-        self.fault_at_f = False
-        self.fault_injected_iteration = False
-        self.fault_injected_run = False
         self.in_correction = False
-
-    def set_fault(self):
-        """
-        Routine to check if bitflip should be done based on input, history and probabilities
-        """
-
-        # check if faults are allowed to occur
-        if (not self.fault_injected_iteration or self.params.allow_multiple_faults_per_iteration) and \
-                (not self.fault_injected_run or self.params.allow_multiple_faults_per_run) and not self.in_correction:
-
-            # draw number to see if bitflip should occur (compare to user input probability)
-            bitflip = np.random.rand(1)
-            if bitflip < self.params.bitflip_probability:
-
-                # draw number to see if we want u or f bitflips
-                u_or_f = np.random.randint(2)
-                if u_or_f == 0:
-                    self.fault_at_u = True
-                else:
-                    self.fault_at_f = True
+        self.fault_iteration = False
 
     def inject_fault(self, type=None, target=None):
         """
@@ -120,7 +89,6 @@ class implicit_sweeper_faults(generic_implicit):
 
             self.fault_stats.nfaults_injected_u += 1
             # Reset indicator for where fault occured
-            self.fault_at_u = False
 
         # do bitflip in f
         elif type == 'f':
@@ -132,13 +100,14 @@ class implicit_sweeper_faults(generic_implicit):
 
             self.fault_stats.nfaults_injected_f += 1
             # Reset indicator for where fault occured
-            self.fault_at_f = False
 
         else:
 
             tmp = None
             print('ERROR: wrong fault type specified, got %s' % type)
             exit()
+
+        self.fault_injected = True
 
         if self.params.dump_injections_filehandle is not None:
             out = str(datetime.now())
@@ -149,15 +118,13 @@ class implicit_sweeper_faults(generic_implicit):
             out += '\n'
             self.params.dump_injections_filehandle.write(out)
 
-        self.fault_injected_run = True
-        self.fault_injected_iteration = True
-
     def detect_fault(self, current_node=None, rhs=None):
         """
         Main method to detect a fault
 
         Args:
             current_node (int): current node we are working with at the moment
+            rhs: right-hand side vector for usage in detector
         """
 
         # get current level for further use
@@ -170,23 +137,25 @@ class implicit_sweeper_faults(generic_implicit):
         if res_norm > self.params.detector_threshold:
             print('     FAULT DETECTED!')
             self.fault_detected = True
+        else:
+            self.fault_detected = False
 
         # update statistics
         # fault injected and fault detected -> yeah!
-        if self.fault_injected_iteration and self.fault_detected:
+        if self.fault_injected and self.fault_detected:
             self.fault_stats.nfaults_detected += 1
         # no fault injected but fault detected -> meh!
-        elif not self.fault_injected_iteration and self.fault_detected:
+        elif not self.fault_injected and self.fault_detected:
             self.fault_stats.nfalse_positives += 1
             # in correction mode and fault detected -> meeeh!
             if self.in_correction:
                 self.fault_stats.nfalse_positives_in_correction += 1
         # fault injected but no fault detected -> meh!
-        elif self.fault_injected_iteration and not self.fault_detected:
+        elif self.fault_injected and not self.fault_detected:
             self.fault_stats.nfaults_missed += 1
         # no fault injected and no fault detected -> yeah!
         else:
-            self.fault_stats.nclean_runs += 1
+            self.fault_stats.nclean_steps += 1
 
     def correct_fault(self):
         """
@@ -237,12 +206,21 @@ class implicit_sweeper_faults(generic_implicit):
             if L.tau is not None:
                 integral[m] += L.tau[m]
 
+        fault_node = np.random.randint(M)
+
         # do the sweep
         m = 0
         while m < M:
 
             # see if there will be a fault
-            self.set_fault()
+            self.fault_injected = False
+            fault_at_u = False
+            fault_at_f = False
+            if not self.in_correction and m == fault_node and self.fault_iteration:
+                if np.random.randint(2) == 0:
+                    fault_at_u = True
+                else:
+                    fault_at_f = True
 
             # build rhs, consisting of the known values from above and new values from previous nodes (at k+1)
             # this is what needs to be protected separately!
@@ -250,7 +228,7 @@ class implicit_sweeper_faults(generic_implicit):
             for j in range(m + 1):
                 rhs += L.dt * self.QI[m + 1, j] * L.f[j]
 
-            if self.fault_at_u:
+            if fault_at_u:
 
                 # implicit solve with prefactor stemming from the diagonal of Qd
                 L.u[m + 1] = P.solve_system(rhs, L.dt * self.QI[m + 1, m + 1], L.u[m + 1],
@@ -262,7 +240,7 @@ class implicit_sweeper_faults(generic_implicit):
                 # update function values
                 L.f[m + 1] = P.eval_f(L.u[m + 1], L.time + L.dt * self.coll.nodes[m])
 
-            elif self.fault_at_f:
+            elif fault_at_f:
 
                 # implicit solve with prefactor stemming from the diagonal of Qd
                 L.u[m + 1] = P.solve_system(rhs, L.dt * self.QI[m + 1, m + 1], L.u[m + 1],
@@ -292,9 +270,6 @@ class implicit_sweeper_faults(generic_implicit):
             else:
                 self.in_correction = False
                 m += 1
-
-        # reset fault flag for iterations
-        self.fault_injected_iteration = False
 
         # indicate presence of new values at this level
         L.status.updated = True
