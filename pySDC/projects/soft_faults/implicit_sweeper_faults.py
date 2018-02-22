@@ -1,5 +1,6 @@
 import numpy as np
 from datetime import datetime
+import struct
 
 from pySDC.implementations.sweeper_classes.generic_implicit import generic_implicit
 
@@ -70,6 +71,25 @@ class implicit_sweeper_faults(generic_implicit):
         self.in_correction = False
         self.fault_iteration = False
 
+    @staticmethod
+    def bitsToFloat(b):
+        s = struct.pack('>q', b)
+        return struct.unpack('>d', s)[0]
+
+    @staticmethod
+    def floatToBits(f):
+        s = struct.pack('>d', f)
+        return struct.unpack('>q', s)[0]
+
+    def do_bitflip(self, a, pos):
+        if pos < 63:
+            b = self.floatToBits(a)
+            mask = 1 << pos
+            c = b ^ mask
+            return self.bitsToFloat(c)
+        elif pos == 63:
+            return -a
+
     def inject_fault(self, type=None, target=None):
         """
         Main method to inject a fault if set_faults() as decided this is necessary
@@ -83,23 +103,27 @@ class implicit_sweeper_faults(generic_implicit):
         if type == 'u':
 
             # do something to target = u here!
-            tmp = target.values[19].copy()
-            target.values[19] = -1000
+            ulen = len(target.values)
+            bitflip_entry = np.random.randint(ulen)
+            pos = np.random.randint(64)
+            tmp = target.values[bitflip_entry]
+            target.values[bitflip_entry] = self.do_bitflip(target.values[bitflip_entry], pos)
             print('     fault in u injected')
 
             self.fault_stats.nfaults_injected_u += 1
-            # Reset indicator for where fault occured
 
         # do bitflip in f
         elif type == 'f':
 
             # do something to target = f here!
-            tmp = target.values[19].copy()
-            target.values[19] = -1000
+            flen = len(target.values)
+            bitflip_entry = np.random.randint(flen)
+            pos = np.random.randint(64)
+            tmp = target.values[bitflip_entry]
+            target.values[bitflip_entry] = self.do_bitflip(target.values[bitflip_entry], pos)
             print('     fault in f injected')
 
             self.fault_stats.nfaults_injected_f += 1
-            # Reset indicator for where fault occured
 
         else:
 

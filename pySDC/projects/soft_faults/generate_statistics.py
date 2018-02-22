@@ -122,7 +122,7 @@ def run_faulty_simulations(type=None, niters=None, f=None):
 
     filehandle_injections = open('dump_injections.txt', 'w')
     controller_params['hook_class'] = fault_hook
-    description['sweeper_params']['allow_fault_correction'] = True
+    description['sweeper_params']['allow_fault_correction'] = False
     description['sweeper_params']['detector_threshold'] = 1E-10
     description['sweeper_params']['dump_injections_filehandle'] = filehandle_injections
     description['sweeper_params']['niters'] = niters
@@ -152,13 +152,16 @@ def run_faulty_simulations(type=None, niters=None, f=None):
 def process_statistics(type=None, results=None):
 
     minlen = 1000
+    nruns = 0
     for stats in results:
         residuals = sort_stats(filter_stats(stats, type='residual_post_iteration'), sortby='iter')
         minlen = min(minlen, len(residuals))
+        nruns += 1
 
     minres = np.zeros(minlen)
     minres[:] = 1000
     maxres = np.zeros(minlen)
+    meanres = np.zeros(minlen)
     for stats in results:
 
         # Some black magic to extract fault stats ouf of monstrous stats object
@@ -167,7 +170,8 @@ def process_statistics(type=None, results=None):
         residuals = sort_stats(filter_stats(stats, type='residual_post_iteration'), sortby='iter')
         for i in range(minlen):
             minres[i] = min(minres[i], residuals[i][1])
-            maxres[i] = max(minres[i], residuals[i][1])
+            maxres[i] = max(maxres[i], residuals[i][1])
+            meanres[i] += residuals[i][1]
 
         # Example output of what we now can do
         print(fault_stats.nfaults_injected_u, fault_stats.nfaults_injected_f, fault_stats.nfaults_detected,
@@ -175,8 +179,10 @@ def process_statistics(type=None, results=None):
               fault_stats.nfaults_missed, fault_stats.nclean_steps)
 
         # print('Mean number of iterations for this run: %s' % np.mean(niters))
-        print()
+        # print()
 
+    meanres /= nruns
+    print(meanres)
     # print(minres)
     # print(maxres)
 
