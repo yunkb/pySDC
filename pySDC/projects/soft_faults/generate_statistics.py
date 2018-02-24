@@ -83,6 +83,7 @@ def reaction_setup():
     problem_params['lambda0'] = 2.0
     problem_params['newton_maxiter'] = 20
     problem_params['newton_tol'] = 1E-10
+    problem_params['stop_at_nan'] = False
     problem_params['interval'] = (-5, 5)
     problem_params['nvars'] = 127
 

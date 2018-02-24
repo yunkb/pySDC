@@ -35,6 +35,9 @@ class generalized_fisher(ptype):
                 msg = 'need %s to instantiate problem, only got %s' % (key, str(problem_params.keys()))
                 raise ParameterError(msg)
 
+        if 'stop_at_nan' not in problem_params:
+            problem_params['stop_at_nan'] = True
+
         # we assert that nvars looks very particular here.. this will be necessary for coarsening in space later on
         if (problem_params['nvars'] + 1) % 2 != 0:
             raise ProblemError('setup requires nvars = 2^p - 1')
@@ -106,7 +109,7 @@ class generalized_fisher(ptype):
             # if g is close to 0, then we are done
             res = np.linalg.norm(g, np.inf)
 
-            if res < self.params.newton_tol:
+            if res < self.params.newton_tol or np.isnan(res):
                 break
 
             # assemble dg
@@ -118,6 +121,11 @@ class generalized_fisher(ptype):
 
             # increase iteration count
             n += 1
+
+        if np.isnan(res) and self.params.stop_at_nan:
+            raise ProblemError('Newton got nan after %i iterations, aborting...' % n)
+        elif np.isnan(res):
+            self.logger.warning('Newton got nan after %i iterations...' % n)
 
         if n == self.params.newton_maxiter:
             raise ProblemError('Newton did not converge after %i iterations, error is %s' % (n, res))
