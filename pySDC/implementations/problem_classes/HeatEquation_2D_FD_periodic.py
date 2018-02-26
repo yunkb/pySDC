@@ -111,7 +111,7 @@ class heat2d_periodic(ptype):
         """
 
         me = self.dtype_u(self.init)
-        L = splu(sp.eye(self.params.nvars, format='csc') - factor * self.A)
+        L = splu(sp.eye(self.params.nvars[0] * self.params.nvars[1], format='csc') - factor * self.A)
         me.values = L.solve(rhs.values)
         return me
 
@@ -128,7 +128,7 @@ class heat2d_periodic(ptype):
 
         me = self.dtype_u(self.init)
         xvalues = np.array([i * self.dx for i in range(self.params.nvars[0])])
-        me.values = np.kron(np.sin(np.pi * self.params.freq * xvalues), np.sin(np.pi * self.params.freq * xvalues)) * \
+        yvalues = np.kron(np.sin(np.pi * self.params.freq * xvalues), np.sin(np.pi * self.params.freq * xvalues)) * \
             np.exp(-t * self.params.nu * (np.pi * self.params.freq) ** 2)
-        me.values = me.values.flatten()
+        me.values = yvalues.flatten()
         return me
