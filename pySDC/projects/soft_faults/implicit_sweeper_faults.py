@@ -100,6 +100,9 @@ class implicit_sweeper_faults(generic_implicit):
         """
 
         # do bitflip in u
+        pos = 0
+        bitflip_entry = 0
+
         if type == 'u':
 
             # do something to target = u here!
@@ -136,9 +139,9 @@ class implicit_sweeper_faults(generic_implicit):
         if self.params.dump_injections_filehandle is not None:
             out = str(datetime.now())
             out += ' --- '
-            out += type + ' ' + str(19)
+            out += type + ' ' + str(bitflip_entry) + ' ' + str(pos)
             out += ' --- '
-            out += str(tmp) + ' ' + str(target.values[19])
+            out += str(tmp) + ' ' + str(target.values[bitflip_entry])
             out += '\n'
             self.params.dump_injections_filehandle.write(out)
 
@@ -157,7 +160,6 @@ class implicit_sweeper_faults(generic_implicit):
         res = L.u[current_node].values - L.dt * self.QI[current_node, current_node] * L.f[current_node].values \
             - rhs.values
         res_norm = np.linalg.norm(res, np.inf)
-
         if res_norm > self.params.detector_threshold:
             print('     FAULT DETECTED!')
             self.fault_detected = True

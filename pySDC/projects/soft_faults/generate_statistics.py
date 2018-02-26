@@ -3,6 +3,8 @@ import dill
 
 from pySDC.implementations.problem_classes.HeatEquation_1D_FD import heat1d
 from pySDC.implementations.problem_classes.GeneralizedFisher_1D_FD_implicit import generalized_fisher
+from pySDC.implementations.problem_classes.Van_der_Pol_implicit import vanderpol
+
 from pySDC.implementations.datatype_classes.mesh import mesh
 from pySDC.implementations.collocation_classes.gauss_radau_right import CollGaussRadau_Right
 from pySDC.implementations.controller_classes.allinclusive_multigrid_nonMPI import allinclusive_multigrid_nonMPI
@@ -109,6 +111,53 @@ def reaction_setup():
     return description, controller_params
 
 
+def vanderpol_setup():
+    """
+    Van der Pol's oscillator
+    """
+    # initialize level parameters
+    level_params = dict()
+    level_params['restol'] = 1E-10
+    level_params['dt'] = 0.25
+    level_params['nsweeps'] = 1
+
+    # initialize sweeper parameters
+    sweeper_params = dict()
+    sweeper_params['collocation_class'] = CollGaussRadau_Right
+    sweeper_params['num_nodes'] = 3
+    sweeper_params['QI'] = 'LU'
+    sweeper_params['detector_threshold'] = 1E-10
+
+    # initialize problem parameters
+    problem_params = dict()
+    problem_params['newton_tol'] = 1E-10
+    problem_params['newton_maxiter'] = 50
+    problem_params['stop_at_nan'] = False
+    problem_params['mu'] = 18
+    problem_params['u0'] = (1.0, 0.0)
+
+    # initialize step parameters
+    step_params = dict()
+    step_params['maxiter'] = 20
+
+    # initialize controller parameters
+    controller_params = dict()
+    controller_params['logger_level'] = 30
+
+    # Fill description dictionary for easy hierarchy creation
+    description = dict()
+    description['problem_class'] = vanderpol
+    description['problem_params'] = problem_params
+    description['dtype_u'] = mesh
+    description['dtype_f'] = mesh
+    description['sweeper_class'] = implicit_sweeper_faults
+    description['sweeper_params'] = sweeper_params
+    description['level_params'] = level_params
+    description['step_params'] = step_params
+
+    return description, controller_params
+
+
 def run_clean_simulations(type=None, f=None):
     """
     A simple code to run fault-free simulations
@@ -120,16 +169,16 @@ def run_clean_simulations(type=None, f=None):
 
     if type == 'diffusion':
         description, controller_params = diffusion_setup()
-        # set time parameters
-        t0 = 0.0
-        Tend = 0.25
     elif type == 'reaction':
         description, controller_params = reaction_setup()
-        # set time parameters
-        t0 = 0.0
-        Tend = 0.25
+    elif type == 'vanderpol':
+        description, controller_params = vanderpol_setup()
     else:
         raise ValueError('No valis setup type provided, aborting..')
+
+    # set time parameters
+    t0 = 0.0
+    Tend = description['level_params']['dt']
 
     out = '\nCLEAN RUN: Working with %s setup..' % type
     f.write(out + '\n')
@@ -146,15 +195,13 @@ def run_clean_simulations(type=None, f=None):
     # this is where the iteration is happening
     uend, stats = controller.run(u0=uinit, t0=t0, Tend=Tend)
 
-    uex = P.u_exact(Tend)
-
     # filter statistics by type (number of iterations)
     filtered_stats = filter_stats(stats, type='niter')
 
     # convert filtered statistics to list of iterations count, sorted by process
     iter_counts = sort_stats(filtered_stats, sortby='time')
 
-    print('After %s iterations, I got an error of %6.4e for a clean run!' % (iter_counts[0][1], abs(uex - uend)))
+    print('This clean run took %s iterations!' % iter_counts[0][1])
 
     return iter_counts[0][1]
 
@@ -171,16 +218,16 @@ def run_faulty_simulations(type=None, niters=None, f=None):
 
     if type == 'diffusion':
         description, controller_params = diffusion_setup()
-        # set time parameters
-        t0 = 0.0
-        Tend = 0.25
     elif type == 'reaction':
         description, controller_params = reaction_setup()
-        # set time parameters
-        t0 = 0.0
-        Tend = 0.25
+    elif type == 'vanderpol':
+        description, controller_params = vanderpol_setup()
     else:
-        raise ValueError('No valid setup type provided, aborting..')
+        raise ValueError('No valis setup type provided, aborting..')
+
+    # set time parameters
+    t0 = 0.0
+    Tend = description['level_params']['dt']
 
     out = '\nFAULTY RUN: Working with %s setup..' % type
     f.write(out + '\n')
@@ -256,13 +303,19 @@ def main():
 
     f = open('generate_statistics.txt', 'w')
 
-    type = 'diffusion'
-    niters = run_clean_simulations(type=type, f=f)
-    run_faulty_simulations(type=type, niters=niters, f=f)
-    results = dill.load(open("results_" + type + ".pkl", "rb"))
-    process_statistics(type=type, results=results)
+    # type = 'diffusion'
+    # niters = run_clean_simulations(type=type, f=f)
+    # run_faulty_simulations(type=type, niters=niters, f=f)
+    # results = dill.load(open("results_" + type + ".pkl", "rb"))
+    # process_statistics(type=type, results=results)
+    #
+    # type = 'reaction'
+    # niters = run_clean_simulations(type=type, f=f)
+    # run_faulty_simulations(type=type, niters=niters, f=f)
+    # results = dill.load(open("results_" + type + ".pkl", "rb"))
+    # process_statistics(type=type, results=results)
 
-    type = 'reaction'
+    type = 'vanderpol'
     niters = run_clean_simulations(type=type, f=f)
     run_faulty_simulations(type=type, niters=niters, f=f)
     results = dill.load(open("results_" + type + ".pkl", "rb"))
