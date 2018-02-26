@@ -174,7 +174,7 @@ def run_clean_simulations(type=None, f=None):
     elif type == 'vanderpol':
         description, controller_params = vanderpol_setup()
     else:
-        raise ValueError('No valis setup type provided, aborting..')
+        raise ValueError('No valid setup type provided, aborting..')
 
     # set time parameters
     t0 = 0.0
@@ -223,7 +223,7 @@ def run_faulty_simulations(type=None, niters=None, f=None):
     elif type == 'vanderpol':
         description, controller_params = vanderpol_setup()
     else:
-        raise ValueError('No valis setup type provided, aborting..')
+        raise ValueError('No valid setup type provided, aborting..')
 
     # set time parameters
     t0 = 0.0
@@ -303,17 +303,17 @@ def main():
 
     f = open('generate_statistics.txt', 'w')
 
-    # type = 'diffusion'
-    # niters = run_clean_simulations(type=type, f=f)
-    # run_faulty_simulations(type=type, niters=niters, f=f)
-    # results = dill.load(open("results_" + type + ".pkl", "rb"))
-    # process_statistics(type=type, results=results)
-    #
-    # type = 'reaction'
-    # niters = run_clean_simulations(type=type, f=f)
-    # run_faulty_simulations(type=type, niters=niters, f=f)
-    # results = dill.load(open("results_" + type + ".pkl", "rb"))
-    # process_statistics(type=type, results=results)
+    type = 'diffusion'
+    niters = run_clean_simulations(type=type, f=f)
+    run_faulty_simulations(type=type, niters=niters, f=f)
+    results = dill.load(open("results_" + type + ".pkl", "rb"))
+    process_statistics(type=type, results=results)
+
+    type = 'reaction'
+    niters = run_clean_simulations(type=type, f=f)
+    run_faulty_simulations(type=type, niters=niters, f=f)
+    results = dill.load(open("results_" + type + ".pkl", "rb"))
+    process_statistics(type=type, results=results)
 
     type = 'vanderpol'
     niters = run_clean_simulations(type=type, f=f)
