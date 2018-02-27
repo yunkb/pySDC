@@ -2,6 +2,7 @@ from mpi4py import MPI
 import numpy as np
 
 from pySDC.implementations.problem_classes.HeatEquation_2D_FD_periodic import heat2d_periodic
+from pySDC.implementations.problem_classes.HeatEquation_2D_FD import heat2d
 from pySDC.implementations.datatype_classes.mesh import mesh
 from pySDC.implementations.collocation_classes.gauss_radau_right import CollGaussRadau_Right
 from pySDC.implementations.sweeper_classes.generic_implicit import generic_implicit
@@ -22,9 +23,6 @@ def main():
     # set MPI communicator
     comm = MPI.COMM_WORLD
 
-    # set up number of parallel time-steps to run PFASST with
-    num_proc = 1
-
     # initialize level parameters
     level_params = dict()
     level_params['restol'] = 1E-10
@@ -36,13 +34,13 @@ def main():
     sweeper_params['collocation_class'] = CollGaussRadau_Right
     sweeper_params['num_nodes'] = [3]
     sweeper_params['QI'] = ['LU']  # For the IMEX sweeper, the LU-trick can be activated for the implicit part
-    # sweeper_params['spread'] = False
+    sweeper_params['spread'] = False
 
     # initialize problem parameters
     problem_params = dict()
     problem_params['nu'] = 1.0  # diffusion coefficient
     problem_params['freq'] = 4  # frequency for the test value
-    problem_params['nvars'] = [(32, 32)]  # number of degrees of freedom for each level
+    problem_params['nvars'] = [(127, 127), (63, 63)]  # number of degrees of freedom for each level
 
     # initialize step parameters
     step_params = dict()
@@ -52,7 +50,7 @@ def main():
     space_transfer_params = dict()
     space_transfer_params['rorder'] = 2
     space_transfer_params['iorder'] = 2
-    space_transfer_params['periodic'] = True
+    space_transfer_params['periodic'] = False
     # space_transfer_params['finter'] = True
 
     # initialize controller parameters
@@ -62,7 +60,7 @@ def main():
 
     # fill description dictionary for easy step instantiation
     description = dict()
-    description['problem_class'] = heat2d_periodic  # pass problem class
+    description['problem_class'] = heat2d  # pass problem class
     description['problem_params'] = problem_params  # pass problem parameters
     description['dtype_u'] = mesh  # pass data type for u
     description['dtype_f'] = mesh  # pass data type for f

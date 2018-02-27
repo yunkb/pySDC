@@ -179,6 +179,7 @@ class allinclusive_classic_MPI(controller):
             comm: communicator
         """
         # do a blocking send
+        source.sweep.compute_end_point()
         comm.send(source.uend, dest=target, tag=tag)
 
     def predictor(self, comm):
@@ -316,12 +317,6 @@ class allinclusive_classic_MPI(controller):
 
             self.S.levels[0].sweep.compute_end_point()
 
-            if not self.S.status.last and self.params.fine_comm:
-                self.logger.debug('isend data: process %s, stage %s, time %s, target %s, tag %s, iter %s' %
-                                  (self.S.status.slot, self.S.status.stage, self.S.time, self.S.next,
-                                   0, self.S.status.iter))
-                self.req_send.append(comm.isend(self.S.levels[0].uend, dest=self.S.next, tag=0))
-
             # update stage
             self.S.status.stage = 'IT_CHECK'
 
@@ -379,7 +374,7 @@ class allinclusive_classic_MPI(controller):
                 self.S.levels[-1].sweep.update_nodes()
             self.S.levels[-1].sweep.compute_residual()
             self.hooks.post_sweep(step=self.S, level_number=len(self.S.levels) - 1)
-            self.S.levels[-1].sweep.compute_end_point()
+            # self.S.levels[-1].sweep.compute_end_point()
 
             # send to next step
             if not self.S.status.last:
@@ -398,14 +393,21 @@ class allinclusive_classic_MPI(controller):
             # receive and sweep on middle levels (except for coarsest level)
             for l in range(len(self.S.levels) - 1, 0, -1):
 
+                # prolong values
+                self.S.transfer(source=self.S.levels[l], target=self.S.levels[l - 1])
+
+                if not self.S.status.last and self.params.fine_comm:
+                    self.S.levels[l - 1].sweep.compute_end_point()
+                    self.logger.debug('isend data: process %s, stage %s, time %s, target %s, tag %s, iter %s' %
+                                      (self.S.status.slot, self.S.status.stage, self.S.time, self.S.next,
+                                       l - 1, self.S.status.iter))
+                    self.req_send.append(comm.isend(self.S.levels[l - 1].uend, dest=self.S.next, tag=l - 1))
+
                 if not self.S.status.first and self.params.fine_comm and not self.S.status.prev_done:
                     self.logger.debug('recv data: process %s, stage %s, time %s, source %s, tag %s, iter %s' %
                                       (self.S.status.slot, self.S.status.stage, self.S.time, self.S.prev,
                                        l - 1, self.S.status.iter))
                     self.recv(target=self.S.levels[l - 1], source=self.S.prev, tag=l - 1, comm=comm)
-
-                # prolong values
-                self.S.transfer(source=self.S.levels[l], target=self.S.levels[l - 1])
 
                 # on middle levels: do sweep as usual
                 if l - 1 > 0:
