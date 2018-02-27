@@ -5,6 +5,7 @@ import sys
 
 from pySDC.implementations.datatype_classes.complex_mesh import mesh
 
+
 def main():
 
     # set MPI communicator
@@ -31,8 +32,8 @@ def main():
     time_rank = time_comm.Get_rank()
     time_size = time_comm.Get_size()
 
-    print("IDs (world, space, time):  %i / %i -- %i / %i -- %i / %i" %(world_rank, world_size, space_rank, space_size,
-                                                                       time_rank, time_size))
+    print("IDs (world, space, time):  %i / %i -- %i / %i -- %i / %i" % (world_rank, world_size, space_rank, space_size,
+                                                                        time_rank, time_size))
 
     left_time_rank = (time_rank - 1) % time_size
     right_time_rank = (time_rank + 1) % time_size
@@ -43,7 +44,7 @@ def main():
         N = int(2 ** 10 / space_size)
 
     if time_rank == 0:
-        print('ID %i -- Number of DoFs in space: %i' %(space_rank, N))
+        print('ID %i -- Number of DoFs in space: %i' % (space_rank, N))
 
     buf_send = mesh(init=N, val=0.0 + (space_rank + 1) * 1j)
     sum = mesh(init=N, val=0.0 + 0.0 * 1j)
