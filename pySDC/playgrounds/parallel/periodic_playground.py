@@ -42,7 +42,7 @@ def main():
     problem_params = dict()
     problem_params['nu'] = 1.0  # diffusion coefficient
     problem_params['freq'] = 4  # frequency for the test value
-    problem_params['nvars'] = [(128, 128), (64, 64)]  # number of degrees of freedom for each level
+    problem_params['nvars'] = [(32, 32)]  # number of degrees of freedom for each level
 
     # initialize step parameters
     step_params = dict()

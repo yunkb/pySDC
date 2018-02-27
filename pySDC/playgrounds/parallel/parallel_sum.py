@@ -62,18 +62,18 @@ def main():
     for p in range(time_size):
 
         col_index = (time_rank + p + 1) % time_size
-        # req = time_comm.isend(buf_send, dest=left_time_rank, tag=(time_rank + p) % time_size)
-        # buf_recv = time_comm.recv(source=right_time_rank, tag=col_index)
+        req = time_comm.isend(buf_send, dest=left_time_rank, tag=(time_rank + p) % time_size)
+        buf_recv = time_comm.recv(source=right_time_rank, tag=col_index)
 
-        if time_rank % 2 == 0:
-            time_comm.send(buf_send, dest=left_time_rank, tag=(time_rank + p) % time_size)
-            buf_recv = time_comm.recv(source=right_time_rank, tag=col_index)
-        else:
-            buf_recv = time_comm.recv(source=right_time_rank, tag=col_index)
-            time_comm.send(buf_send, dest=left_time_rank, tag=(time_rank + p) % time_size)
+        # if time_rank % 2 == 0:
+        #     time_comm.send(buf_send, dest=left_time_rank, tag=(time_rank + p) % time_size)
+        #     buf_recv = time_comm.recv(source=right_time_rank, tag=col_index)
+        # else:
+        #     buf_recv = time_comm.recv(source=right_time_rank, tag=col_index)
+        #     time_comm.send(buf_send, dest=left_time_rank, tag=(time_rank + p) % time_size)
 
         sum += Emat[time_rank, col_index] * buf_recv
-        # req.wait()
+        req.wait()
         buf_send = buf_recv
 
     t1 = MPI.Wtime()
