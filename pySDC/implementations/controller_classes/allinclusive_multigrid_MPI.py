@@ -309,6 +309,8 @@ class allinclusive_multigrid_MPI(controller):
 
         elif stage == 'IT_FINE':
 
+            comm.Barrier()
+
             nsweeps = self.S.levels[0].params.nsweeps
 
             self.S.levels[0].status.sweep = 0
