@@ -93,7 +93,18 @@ def main():
     rank = comm.Get_rank()
     size = comm.Get_size()
 
-    if rank == size - 1:
+    timing_run = sort_stats(filter_stats(stats, type='timing_run'), sortby='time')
+    tmax = comm.reduce(timing_run[0][1], op=MPI.MAX, root=0)
+    if rank == 0:
+        print(tmax)
+
+    timing_comm = filter_stats(stats, type='timing_comm')
+    timing_sort = sort_stats(timing_comm, sortby='time')
+    sum_time_comm = sum([item[1] for item in timing_sort])
+    tcomm_max = comm.reduce(sum_time_comm, op=MPI.MAX, root=0)
+    print(rank, sum_time_comm, tcomm_max)
+
+    if False:
 
         # filter statistics by type (number of iterations)
         filtered_stats = filter_stats(stats, type='niter')
@@ -120,9 +131,6 @@ def main():
         print('CFL number: %4.2f' % (level_params['dt'] * problem_params['nu'] /
                                      (1.0 / problem_params['nvars'][0][0])**2))
         print('Error: %8.4e' % err)
-
-        timing_run = sort_stats(filter_stats(stats, type='timing_run'), sortby='time')
-        print(timing_run[0][1])
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 from __future__ import division
 import numpy as np
 import scipy.sparse as sp
-from scipy.sparse.linalg import spsolve
+from scipy.sparse.linalg import cg
 
 from pySDC.core.Problem import ptype
 from pySDC.core.Errors import ParameterError, ProblemError
@@ -97,7 +97,8 @@ class heat1d(ptype):
         """
 
         me = self.dtype_u(self.init)
-        me.values = spsolve(sp.eye(self.params.nvars, format='csc') - factor * self.A, rhs.values)
+        me.values = cg(sp.eye(self.params.nvars, format='csc') - factor * self.A, rhs.values, x0=u0.values, tol=1E-12)
+        # me.values = spsolve(sp.eye(self.params.nvars, format='csc') - factor * self.A, rhs.values)
         return me
 
     def u_exact(self, t):
