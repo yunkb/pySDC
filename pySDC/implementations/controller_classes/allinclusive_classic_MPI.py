@@ -266,6 +266,7 @@ class allinclusive_classic_MPI(controller):
             if self.S.status.iter > 0:
                 self.hooks.post_iteration(step=self.S, level_number=0)
 
+            self.hooks.pre_comm(step=self.S, level_number=0)
             # check if an open request of the status send is pending
             if self.req_status is not None:
                 self.req_status.wait()
@@ -284,6 +285,7 @@ class allinclusive_classic_MPI(controller):
                                   (self.S.status.prev_done, self.S.status.slot, self.S.time, self.S.next,
                                    99, self.S.status.iter))
                 self.S.status.done = self.S.status.done and self.S.status.prev_done
+            self.hooks.post_comm(step=self.S, level_number=0, add_to_stats=True)
 
             # if I'm not done or the guy left of me is not done, keep doing stuff
             if not self.S.status.done:
@@ -312,8 +314,10 @@ class allinclusive_classic_MPI(controller):
             self.hooks.post_sweep(step=self.S, level_number=0)
 
             # wait for pending sends before computing uend, if any
+            self.hooks.pre_comm(step=self.S, level_number=0)
             if len(self.req_send) > 0 and not self.S.status.last and self.params.fine_comm:
                 self.req_send[0].wait()
+            self.hooks.post_comm(step=self.S, level_number=0)
 
             self.S.levels[0].sweep.compute_end_point()
 
@@ -335,16 +339,20 @@ class allinclusive_classic_MPI(controller):
                 self.hooks.post_sweep(step=self.S, level_number=l)
 
                 # wait for pending sends before computing uend, if any
+                self.hooks.pre_comm(step=self.S, level_number=l)
                 if len(self.req_send) > l and not self.S.status.last and self.params.fine_comm:
                     self.req_send[l].wait()
+                self.hooks.post_comm(step=self.S, level_number=l)
 
                 self.S.levels[l].sweep.compute_end_point()
 
+                self.hooks.pre_comm(step=self.S, level_number=l)
                 if not self.S.status.last and self.params.fine_comm:
                     self.logger.debug('isend data: process %s, stage %s, time %s, target %s, tag %s, iter %s' %
                                       (self.S.status.slot, self.S.status.stage, self.S.time, self.S.next,
                                        l, self.S.status.iter))
                     self.req_send.append(comm.isend(self.S.levels[l].uend, dest=self.S.next, tag=l))
+                self.hooks.post_comm(step=self.S, level_number=l)
 
                 # transfer further up the hierarchy
                 self.S.transfer(source=self.S.levels[l], target=self.S.levels[l + 1])
@@ -355,12 +363,13 @@ class allinclusive_classic_MPI(controller):
         elif stage == 'IT_COARSE_RECV':
 
             # receive from previous step (if not first)
+            self.hooks.pre_comm(step=self.S, level_number=len(self.S.levels) - 1)
             if not self.S.status.first and not self.S.status.prev_done:
                 self.logger.debug('recv data: process %s, stage %s, time %s, source %s, tag %s, iter %s' %
                                   (self.S.status.slot, self.S.status.stage, self.S.time, self.S.prev,
                                    len(self.S.levels) - 1, self.S.status.iter))
                 self.recv(target=self.S.levels[-1], source=self.S.prev, tag=len(self.S.levels) - 1, comm=comm)
-
+            self.hooks.post_comm(step=self.S, level_number=len(self.S.levels) - 1)
             # update stage
             self.S.status.stage = 'IT_COARSE'
 
@@ -377,11 +386,13 @@ class allinclusive_classic_MPI(controller):
             # self.S.levels[-1].sweep.compute_end_point()
 
             # send to next step
+            self.hooks.pre_comm(step=self.S, level_number=len(self.S.levels) - 1)
             if not self.S.status.last:
                 self.logger.debug('isend data: process %s, stage %s, time %s, target %s, tag %s, iter %s' %
                                   (self.S.status.slot, self.S.status.stage, self.S.time, self.S.next,
                                    len(self.S.levels) - 1, self.S.status.iter))
                 self.send(source=self.S.levels[-1], target=self.S.next, tag=len(self.S.levels) - 1, comm=comm)
+            self.hooks.post_comm(step=self.S, level_number=len(self.S.levels) - 1, add_to_stats=True)
 
             # update stage
             self.S.status.stage = 'IT_DOWN'
@@ -396,6 +407,7 @@ class allinclusive_classic_MPI(controller):
                 # prolong values
                 self.S.transfer(source=self.S.levels[l], target=self.S.levels[l - 1])
 
+                self.hooks.pre_comm(step=self.S, level_number=l - 1)
                 if not self.S.status.last and self.params.fine_comm:
                     self.S.levels[l - 1].sweep.compute_end_point()
                     self.logger.debug('isend data: process %s, stage %s, time %s, target %s, tag %s, iter %s' %
@@ -411,11 +423,14 @@ class allinclusive_classic_MPI(controller):
 
                 # on middle levels: do sweep as usual
                 if l - 1 > 0:
+                    self.hooks.post_comm(step=self.S, level_number=l - 1, add_to_stats=True)
                     self.hooks.pre_sweep(step=self.S, level_number=l - 1)
                     for k in range(self.S.levels[l - 1].params.nsweeps):
                         self.S.levels[l - 1].sweep.update_nodes()
                     self.S.levels[l - 1].sweep.compute_residual()
                     self.hooks.post_sweep(step=self.S, level_number=l - 1)
+                else:
+                    self.hooks.post_comm(step=self.S, level_number=l - 1)
 
             # update stage
             self.S.status.stage = 'IT_FINE'

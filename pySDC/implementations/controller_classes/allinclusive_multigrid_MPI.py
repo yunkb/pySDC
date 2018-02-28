@@ -397,13 +397,13 @@ class allinclusive_multigrid_MPI(controller):
             # sweeps on coarsest level (serial/blocking)
 
             # receive from previous step (if not first)
-            self.hooks.pre_comm(step=self.S, level_number=len(self.S.levels) - 1)
+            # self.hooks.pre_comm(step=self.S, level_number=len(self.S.levels) - 1)
             if not self.S.status.first:
                 self.logger.debug('recv data: process %s, stage %s, time %s, source %s, tag %s, iter %s' %
                                   (self.S.status.slot, self.S.status.stage, self.S.time, self.S.prev,
                                    len(self.S.levels) - 1, self.S.status.iter))
                 self.recv(target=self.S.levels[-1], source=self.S.prev, tag=self.S.status.iter, comm=comm)
-            self.hooks.post_comm(step=self.S, level_number=len(self.S.levels) - 1, add_to_stats=False)
+            # self.hooks.post_comm(step=self.S, level_number=len(self.S.levels) - 1, add_to_stats=False)
 
             # do the sweep
             self.hooks.pre_sweep(step=self.S, level_number=len(self.S.levels) - 1)
@@ -430,6 +430,8 @@ class allinclusive_multigrid_MPI(controller):
         elif stage == 'IT_DOWN':
 
             # prolong corrections down to finest level (parallel)
+
+            comm.Barrier()
 
             # receive and sweep on middle levels (except for coarsest level)
             for l in range(len(self.S.levels) - 1, 0, -1):

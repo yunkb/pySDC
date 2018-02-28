@@ -76,8 +76,8 @@ def main():
     Tend = 1.0
 
     # instantiate controller
-    controller = allinclusive_multigrid_MPI(controller_params=controller_params, description=description, comm=comm)
-    # controller = allinclusive_classic_MPI(controller_params=controller_params, description=description, comm=comm)
+    # controller = allinclusive_multigrid_MPI(controller_params=controller_params, description=description, comm=comm)
+    controller = allinclusive_classic_MPI(controller_params=controller_params, description=description, comm=comm)
 
     # get initial values on finest level
     P = controller.S.levels[0].prob
@@ -104,7 +104,7 @@ def main():
     tcomm_max = comm.reduce(sum_time_comm, op=MPI.MAX, root=0)
     print(rank, sum_time_comm, tcomm_max)
 
-    if False:
+    if True:
 
         # filter statistics by type (number of iterations)
         filtered_stats = filter_stats(stats, type='niter')
@@ -120,17 +120,17 @@ def main():
         niters = np.array([item[1] for item in iter_counts])
         out = '   Mean number of iterations: %4.2f' % np.mean(niters)
         print(out)
-        out = '   Range of values for number of iterations: %2i ' % np.ptp(niters)
-        print(out)
-        out = '   Position of max/min number of iterations: %2i -- %2i' % \
-              (int(np.argmax(niters)), int(np.argmin(niters)))
-        print(out)
-        out = '   Std and var for number of iterations: %4.2f -- %4.2f' % (float(np.std(niters)), float(np.var(niters)))
-        print(out)
-
-        print('CFL number: %4.2f' % (level_params['dt'] * problem_params['nu'] /
-                                     (1.0 / problem_params['nvars'][0][0])**2))
-        print('Error: %8.4e' % err)
+        # out = '   Range of values for number of iterations: %2i ' % np.ptp(niters)
+        # print(out)
+        # out = '   Position of max/min number of iterations: %2i -- %2i' % \
+        #       (int(np.argmax(niters)), int(np.argmin(niters)))
+        # print(out)
+        # out = '   Std and var for number of iterations: %4.2f -- %4.2f' % (float(np.std(niters)), float(np.var(niters)))
+        # print(out)
+        #
+        # print('CFL number: %4.2f' % (level_params['dt'] * problem_params['nu'] /
+        #                              (1.0 / problem_params['nvars'][0][0])**2))
+        # print('Error: %8.4e' % err)
 
 
 if __name__ == "__main__":
