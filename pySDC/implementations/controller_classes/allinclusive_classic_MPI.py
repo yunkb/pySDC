@@ -321,14 +321,14 @@ class allinclusive_classic_MPI(controller):
 
             self.S.levels[0].sweep.compute_end_point()
 
-            self.hooks.pre_comm(step=self.S, level_number=0)
-            if not self.S.status.last and self.params.fine_comm:
-                self.S.levels[0].sweep.compute_end_point()
-                self.logger.debug('isend data: process %s, stage %s, time %s, target %s, tag %s, iter %s' %
-                                  (self.S.status.slot, self.S.status.stage, self.S.time, self.S.next,
-                                   0, self.S.status.iter))
-                self.req_send.append(comm.isend(self.S.levels[0].uend, dest=self.S.next, tag=0))
-            self.hooks.post_comm(step=self.S, level_number=0)
+            # self.hooks.pre_comm(step=self.S, level_number=0)
+            # if not self.S.status.last and self.params.fine_comm:
+            #     self.S.levels[0].sweep.compute_end_point()
+            #     self.logger.debug('isend data: process %s, stage %s, time %s, target %s, tag %s, iter %s' %
+            #                       (self.S.status.slot, self.S.status.stage, self.S.time, self.S.next,
+            #                        0, self.S.status.iter))
+            #     self.req_send.append(comm.isend(self.S.levels[0].uend, dest=self.S.next, tag=0))
+            # self.hooks.post_comm(step=self.S, level_number=0)
 
             # update stage
             self.S.status.stage = 'IT_CHECK'
@@ -372,13 +372,13 @@ class allinclusive_classic_MPI(controller):
         elif stage == 'IT_COARSE_RECV':
 
             # receive from previous step (if not first)
-            self.hooks.pre_comm(step=self.S, level_number=len(self.S.levels) - 1)
+            # self.hooks.pre_comm(step=self.S, level_number=len(self.S.levels) - 1)
             if not self.S.status.first and not self.S.status.prev_done:
                 self.logger.debug('recv data: process %s, stage %s, time %s, source %s, tag %s, iter %s' %
                                   (self.S.status.slot, self.S.status.stage, self.S.time, self.S.prev,
                                    len(self.S.levels) - 1, self.S.status.iter))
                 self.recv(target=self.S.levels[-1], source=self.S.prev, tag=len(self.S.levels) - 1, comm=comm)
-            self.hooks.post_comm(step=self.S, level_number=len(self.S.levels) - 1)
+            # self.hooks.post_comm(step=self.S, level_number=len(self.S.levels) - 1)
             # update stage
             self.S.status.stage = 'IT_COARSE'
 
@@ -414,6 +414,15 @@ class allinclusive_classic_MPI(controller):
             for l in range(len(self.S.levels) - 1, 0, -1):
 
                 self.hooks.pre_comm(step=self.S, level_number=l - 1)
+                if not self.S.status.last and self.params.fine_comm:
+                    self.S.levels[0].sweep.compute_end_point()
+                    self.logger.debug('isend data: process %s, stage %s, time %s, target %s, tag %s, iter %s' %
+                                      (self.S.status.slot, self.S.status.stage, self.S.time, self.S.next,
+                                       l - 1, self.S.status.iter))
+                    self.req_send.append(comm.isend(self.S.levels[l - 1].uend, dest=self.S.next, tag=l - 1))
+                self.hooks.post_comm(step=self.S, level_number=l - 1)
+
+                self.hooks.pre_comm(step=self.S, level_number=l - 1)
                 if not self.S.status.first and self.params.fine_comm and not self.S.status.prev_done:
                     self.logger.debug('recv data: process %s, stage %s, time %s, source %s, tag %s, iter %s' %
                                       (self.S.status.slot, self.S.status.stage, self.S.time, self.S.prev,
@@ -430,7 +439,6 @@ class allinclusive_classic_MPI(controller):
 
                 # on middle levels: do sweep as usual
                 if l - 1 > 0:
-                    self.hooks.post_comm(step=self.S, level_number=l - 1, add_to_stats=True)
                     self.hooks.pre_sweep(step=self.S, level_number=l - 1)
                     for k in range(self.S.levels[l - 1].params.nsweeps):
                         self.S.levels[l - 1].sweep.update_nodes()
