@@ -2,7 +2,7 @@ from __future__ import division
 
 import numpy as np
 import scipy.sparse as sp
-from scipy.sparse.linalg import splu
+from scipy.sparse.linalg import cg
 
 from pySDC.core.Problem import ptype
 from pySDC.core.Errors import ParameterError, ProblemError
@@ -96,7 +96,7 @@ class heat2d_periodic(ptype):
         """
 
         f = self.dtype_f(self.init)
-        f.values = self.A.dot(u.values)
+        f.values = self.A.dot(u.values.flatten()).reshape(self.params.nvars)
         return f
 
     def solve_system(self, rhs, factor, u0, t):
@@ -114,8 +114,9 @@ class heat2d_periodic(ptype):
         """
 
         me = self.dtype_u(self.init)
-        L = splu(sp.eye(self.params.nvars[0] * self.params.nvars[1], format='csc') - factor * self.A)
-        me.values = L.solve(rhs.values)
+        me.values = cg(sp.eye(self.params.nvars[0] * self.params.nvars[1], format='csc') - factor * self.A,
+                       rhs.values.flatten(), x0=u0.values.flatten(), tol=1E-12)[0]
+        me.values = me.values.reshape(self.params.nvars)
         return me
 
     def u_exact(self, t):
@@ -134,5 +135,4 @@ class heat2d_periodic(ptype):
         xv, yv = np.meshgrid(xvalues, xvalues)
         me.values = np.sin(np.pi * self.params.freq * xv) * np.sin(np.pi * self.params.freq * yv) * \
             np.exp(-t * self.params.nu * (np.pi * self.params.freq) ** 2)
-        me.values = me.values.flatten()
         return me

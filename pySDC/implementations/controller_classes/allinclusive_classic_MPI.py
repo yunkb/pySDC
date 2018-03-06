@@ -445,7 +445,6 @@ class allinclusive_classic_MPI(controller):
                     self.S.levels[l - 1].sweep.compute_residual()
                     self.hooks.post_sweep(step=self.S, level_number=l - 1)
 
-
             # update stage
             self.S.status.stage = 'IT_FINE'
 
