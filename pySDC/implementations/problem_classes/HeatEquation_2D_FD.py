@@ -85,7 +85,7 @@ class heat2d(ptype):
         """
 
         f = self.dtype_f(self.init)
-        f.values = self.A.dot(u.values)
+        f.values = self.A.dot(u.values.flatten()).reshape(self.params.nvars)
         return f
 
     def solve_system(self, rhs, factor, u0, t):
@@ -103,8 +103,9 @@ class heat2d(ptype):
         """
 
         me = self.dtype_u(self.init)
-        me.values = cg(sp.eye(self.params.nvars[0] * self.params.nvars[1], format='csc') - factor * self.A, rhs.values,
-                       x0=u0.values, tol=1E-12)[0]
+        me.values = cg(sp.eye(self.params.nvars[0] * self.params.nvars[1], format='csc') - factor * self.A,
+                       rhs.values.flatten(), x0=u0.values.flatten(), tol=1E-12)[0]
+        me.values = me.values.reshape(self.params.nvars)
         return me
 
     def u_exact(self, t):
@@ -123,5 +124,4 @@ class heat2d(ptype):
         xv, yv = np.meshgrid(xvalues, xvalues)
         me.values = np.sin(np.pi * self.params.freq * xv) * np.sin(np.pi * self.params.freq * yv) * \
             np.exp(-t * self.params.nu * (np.pi * self.params.freq) ** 2)
-        me.values = me.values.flatten()
         return me

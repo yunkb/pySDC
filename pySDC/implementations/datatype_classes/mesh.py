@@ -30,7 +30,7 @@ class mesh(object):
             self.values = cp.deepcopy(init.values)
         # if init is a number or a tuple of numbers, create mesh object with val as initial value
         elif isinstance(init, tuple) or isinstance(init, int):
-            self.values = np.empty(init, dtype=np.float64).flatten()
+            self.values = np.empty(init, dtype=np.float64)
             self.values[:] = val
         # something is wrong, if none of the ones above hit
         else:
