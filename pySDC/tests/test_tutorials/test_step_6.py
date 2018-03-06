@@ -72,5 +72,5 @@ def test_C():
                                                   'distribution of time-steps'
 
         for i, j in zip(diff_MPI, diff_nonMPI):
-            assert abs(i - j) < 6E-11, 'ERROR: difference between MPI and nonMPI results is too large for odd ' \
+            assert abs(i - j) < 6E-10, 'ERROR: difference between MPI and nonMPI results is too large for odd ' \
                                        'distributions of time-steps, got %s' %abs(i - j)

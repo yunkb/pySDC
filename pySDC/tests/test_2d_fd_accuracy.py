@@ -58,8 +58,10 @@ def run_accuracy_check(nvars_list,problem_params):
 
         # create a mesh instance and fill it with the Laplacian of the sine wave
         u_lap = prob.dtype_u(init=prob.init)
-        u_lap.values = -2*(np.pi * prob.params.freq) ** 2 * prob.params.nu * np.kron(np.sin(np.pi * prob.params.freq * xvalues), np.sin(np.pi * prob.params.freq * xvalues))
-        u_lap.values = u_lap.values.flatten()
+        xv, yv = np.meshgrid(xvalues, xvalues)
+        u_lap.values = np.sin(np.pi * prob.params.freq * xv) * np.sin(np.pi * prob.params.freq * yv) * \
+                       (-2 * (np.pi * prob.params.freq) ** 2)
+        # u_lap.values = -2*(np.pi * prob.params.freq) ** 2 * prob.params.nu * np.kron(np.sin(np.pi * prob.params.freq * xvalues), np.sin(np.pi * prob.params.freq * xvalues))
 
         # compare analytic and computed solution using the eval_f routine of the problem class
         err = abs(prob.eval_f(u,0) - u_lap)
